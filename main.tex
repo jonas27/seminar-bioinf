@@ -1,4 +1,4 @@
-\documentclass{article}
+\documentclass[10pt]{article}
 \usepackage[a4paper,margin=1in]{geometry}
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
@@ -7,48 +7,44 @@
 \usepackage{natbib}
 \usepackage{graphicx}
 
-\lhead{Luo, Ping, et al.: "deepDriver: predicting cancer driver genes\\ based on somatic mutations using deep convolutional neural networks."}
+\lhead{Luo, Ping, et al.: "deepDriver: predicting cancer driver genes\\ based on somatic mutations using deep convolutional neural networks."\cite{deepdriver}}
 \rhead{Jonas Manser\\4953222}
 
-
 \begin{document}
-\vspace*{-8mm}
-\section*{Summary}
-% I never mention somatic!!!!
-Cancer is the second leading cause of death in world only behind cardiovascular disease\cite{bray2018globalCancerStats}. But despite huge advances in the field we still lack a fundamental understanding of tumorigenesis\cite{martinez2020compendiumDriverGenes}.
-% (which mechanisms drive malignant cell transformation.)
+\vspace*{-6mm}
+\section*{Introduction and Motivation}
+Cancer is the second leading cause of death in world only behind cardiovascular disease\cite{globalCancerStats}. It is characterized by not well-differentiated cells and abnormal and uncontrolled cellular growth primarily caused by genetic mutations. Cancer driver genes are somatic mutations in tumors expressed more often compared to neutral mutagenesis\footnote{Often with very high inter-tumor variation.} and, thus, thought to be essential in their development and progression.\cite{cancerGenome}.   
+% Cancer driver mutations are DNA changes that are causally implicated in oncogenesis
 
-In most organisms the life of a cell is tightly regulated. Cell division is controlled by the body and the cells have normal apoptosis. In contrast, tumors don't. They replicate uncontrolled and have insufficient apoptosis\cite{essentialsOfCellLive}. Tumors can be 
+Methods for identifying driver genes are often based on the mutation frequency or network analysis. The former searches for significantly mutated genes (SMG), whereas in the later a gene interaction networks (GIN) is used for predicting driver genes. Past methods often led to flawed identifications and/or very patient specific results. 
 
-However, carcinogenesis (genetic mutations) in cells is a natural process where a cell's genetic code (DNA or RNA) is changed.
-Most organisms are adapted to cope with a relatively small amount of mutations and the immune system is able to detect and kill mutated cells.
-It is when cell mutation is high and these cells can evade the immune system and are allowed to replicate out of control that they can cause serious health problems.
-Tumors can be be either benign or malignant (cancerous). Benign tumors 
-With next-generation sequencing techniques massive amounts of cancer genomic data could be extracted and can now be used to identify genes which are prominent in oncogenic mutations, so called driver genes. These genes exhibit a different pattern of somantic mutations expected from neutral mutagenesis in cells.
-This in turn will deepen our understanding of cancer and help developing new treatments and medications.
+Newer research, mostly based on machine learning methods, uses already validated driver genes to predict new ones, predominantly via random forests and SVMs. Both achieve better results than previous methods. In this research the authors use a convolutional neural network (CNN) to exploit spatial information inside a gene similarity network (GSN) to predict cancer driver genes with great avail.  
 
-In the past there were two common methods to identify driver genes. The first method is based on "significantly mutated genes" (SMG), i.e. genes whose mutation rate is significantly higher than the background mutation rate. These genes are then classified as driver genes. However, this approach is patient-specific due to the heterogeneity of tumors and makes it difficult to construct a reliable background mutation model. The second method predicts driver genes based on a network analysis. They rely on gene driver networks (GIN) databases which often contain a high number of false positives leading to flawed identifications.
+\section*{Method Description}
+% Make it easy but scientific
+The researches studied three types of cancer: breast invasive carcinoma (BRCA), colon adenocarcinoma (COAD) and lung adenocarcinoma (LUAD). Their research method has two main components, a GSN and a CNN.  
 
-The use of machine learning (ML) methods to find driver genes is gaining popularity among researches. New models based on random forests and SVMs (combined with down-sampling) achieved better results than previous algorithms.
-In this study the researches went further and used a gene similarity network (GSN) to structure the data and a convolution neural network (CNN) to subsequently predict driver genes. The study evaluated deep drivers for the following types of cancer: breast invasive carcinoma (BRCA), colon adenocarcinoma (COAD) and lung adenocarcinoma (LUAD). The data was downloaded from the NCI Genomic Data Commons (GDC) and hypermutated samples were filtered out.
-
-To construct the GSN the researches calculated the Pearson correlation coefficient (PCC) for each gene $g_i$ to all other genes over $v$ tumor samples.
-The resulting values were subsequently used in the k-nearest neighbors (kNN) algorithm to construct an undirected network where genes are connected if their PCC exceeds a certain threshold $k$. For each gene 12 features were constructed and together with the k-nearest neighbors used as input data. The researches then constructed a 1-D matrix for each gene with its k-nearest neighbors where the rows show the genes and the columns represent their 12 features. To gain spatial information the gene in question was repeated for each neighbor, so $k$ times, in the order $g_i, g_s1,g_i,g_s2, ... , g_i,g_sk$. This resulted in a input feature matrix for each gene $g_i$ with:
+The mutation and gene expression data comes from the NCI Genomic Data Commons (GDC) with quality controls applied inline with similar research. The GSN is constrcuted by calculating the Peason correlation coefficient (PCC) for each gene $g_i$ compared to all other genes for each of the three cancer types. 
+The PCC is used to `characterize the relationships between genes in the disease states'.  
+The resulting values are subsequently used in the k-nearest neighbors (kNN) algorithm to construct an undirected network where $k$ genes with the highest PCC are connected. 
+For each gene 12 features are constructed and used together with the kNN to construct a 2-D matrix for each gene where the columns represent the genes and the rows their 12 features. 
+To gain spatial information the gene in question is repeated for each neighbor, so $k$ times, in the order $g_i, g_s1,g_i,g_s2, ... , g_i,g_sk$. This resulted in a input feature matrix $\phi$ for each gene $g_i$:
 \begin{equation}
 \phi_i \in R^{2k \times 12}
-\end{equation}
+\end{equation}  
 
-CNNs accelerate at finding patterns in a feature matrix, as it assumes spatial information to be useful. They are usually made up of a repeated sequence of convolutional layers and pooling layers followed by a one fully connected (FC) layer at the end. The abstraction level, as in most neural networks (NN), tends to be higher in shallower layers but decreases in deeper layers. For CNN's this means that global structures (like a line) are recognized on the shallower layers and more concrete structures (like eyes) in the deeper layers. That is because at convolutional layer a filter is slided over the input matrix and thereby learns to recognize a pattern. It's original and primary use case is picture analytic, but novel research is using it outside its original area with great avail. Here, the filter is slided over the input matrix comparing the features of the gene in question with the same features of its k-nearest neighbor genes. This output is then used in the subsequent NN and finally a value is returned which indicates whether the gene in quesiton is a driver gene or not. The hyper parameters (HP) were optimized with ten-fold cross-validation and grid search.
+CNNs extrapolate spatial information from the underlying data by combining convolution and pooling layers (usually more than once). To make a classification one or more fully connected (FC) layers are used in the end of the CNN. 
+Applying the CNN to a gene input feature matrix $\phi_i$ results in a classification of the gene as a driver gene (or not) for a specific cancer.
+For training, this result is then compared to labels collected from two different sources and the error is back-propagated through the network to train the CNN. 
+The researches empirically set the size of the filters, the window size of the pooling layers and the stride sizes used in the CONV layers and the pooling layers all to 2. Other hyperparameters (HP), the number of CONV layers (ncl), the number of nodes in the CONV layers (ncn), the number of FC layers (nfl) and the number of nodes in the FC layer (nfn) are optimized with 10-fold cross-validation and grid search. They found that for ncl, ncn, nfl, nfn the optimal values are 2, 24, 1 and 48. Searching for the number of neighbors k, they found 7 was optimal with respect to performance and accuracy.
 
 % where are the known driver genes coming from
+\section*{Evaluation and Analysis}
+To test their results the author pitted the CNN against an SVM and a random forest algorithm called 20/20+ trained on the same data. They then compared the algorithms results for already known cancer drivers but also for predicting possibly new driver genes, called de novo study.
 
-To test the results the author pitted the CNN against an SVM and a random forest algorithm called 20/20+ for predicting driver genes from known deep drivers, cross-validation, and for predicting possibly new driver genes, de novo study. All algorithms were similarly optimized to induce no advantage to any algorithm. In all tumors the CNN performed at least 15.1\% better at predicting driver genes for cross-validation and outperformed all others in the de novo study. 
+In all tumors the CNN performed at least 15.1\% better at predicting driver genes for cross-validation and, importantly, outperformed all others in the de novo study. 
 
-Combining similarity networks with CNNs led to remarkable results beating some of the best algorithms today for predecting driver genes in specific cancers. But in the future the same approach could be used to predict generic driver genes in pancancer datasets. 
-
-Finally, for all advances in cancer research prevention is still considered the most effective way to reduce overall cancer occurrence but unfortunately "policymakers remain unaware of the degree of progress and the benefits that prevention brings".\cite{bray2018globalCancerStats}.
-
-
+Finally, combining similarity networks with CNNs led to remarkable results beating some of the best algorithms today for predicting driver genes for individual cancers. In the future, the authors think a similar approach could be used to predict generic driver genes in pan-cancer data sets. 
 \bibliographystyle{plain}
 \bibliography{refs}
 \end{document}
